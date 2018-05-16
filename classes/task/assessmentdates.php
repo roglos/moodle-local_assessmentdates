@@ -214,7 +214,7 @@ class assessmentdates extends \core\task\scheduled_task {
                 if (!empty($a['assessment_duedate'])) { // If external Db already has a due date.
                     // And external duedate is different, set duedate value as Moodle value.
                     if ($a['assessment_duedate'] != $duedate || $a['assessment_duetime'] != $duetime) {
-                        $sql = "UPDATE " . $tableassm . " SET assessment_duedate = '" . $duedate . "', assessment_duetime = '" . $duetime . "', assessment_duedatechange = 1
+                        $sql = "UPDATE " . $tableassm . " SET assessment_duedate = '" . $duedate . "', assessment_duetime = '" . $duetime . "', assessment_changebymoodle = 1
                         WHERE assessment_idcode = '" . $linkcode . "';";
                         echo $sql;
                         $extdb->Execute($sql);
@@ -222,7 +222,7 @@ class assessmentdates extends \core\task\scheduled_task {
                     }
                 } else { // If external Db doesn't have a due date set.
                     if (isset($sqldates[$idcode]->duedate)) { // But MDL does, set duedate value as Moodle value.
-                        $sql = "UPDATE " . $tableassm . " SET assessment_duedate = '" . $duedate . "', assessment_duetime = '" . $duetime . "', assessment_duedatechange = 1
+                        $sql = "UPDATE " . $tableassm . " SET assessment_duedate = '" . $duedate . "', assessment_duetime = '" . $duetime . "', assessment_changebymoodle = 1
                         WHERE assessment_idcode = '" . $linkcode . "';";
                         echo $sql;
                         $extdb->Execute($sql);
