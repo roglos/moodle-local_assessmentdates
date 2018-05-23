@@ -83,11 +83,12 @@ class assessmentdates extends \core\task\scheduled_task {
          *     duedate (UNIX timestamp)                         *
          *     gradingduedate (UNIX timestamp)                  *
          ********************************************************/
-        $sqldates = $DB->get_records_sql('SELECT a.id as id,m.id as cm, m.idnumber as linkcode,a.name,a.duedate,a.gradingduedate FROM {course_modules} m
+        $sqldates = $DB->get_records_sql('SELECT a.id as id,m.id as cm, m.idnumber as linkcode,a.name,a.duedate,a.gradingduedate
+            FROM {course_modules} m
             JOIN {assign} a ON m.instance = a.id
             JOIN {modules} mo ON m.module = mo.id
             WHERE m.idnumber IS NOT null AND m.idnumber != "" AND mo.name = "assign"');
-//print_r($sqldates);
+
         // Get external assessments table name.
         $tableassm = $this->get_config('remotetable');
         $assessments = array();
@@ -155,22 +156,22 @@ class assessmentdates extends \core\task\scheduled_task {
         }
 
         // Create reference array of assignment id and link code from mdl.
-        $assign_mdl = array();
+        $assignmdl = array();
         foreach ($sqldates as $sd) {
-            $assign_mdl[$sd->linkcode]['id'] = $sd->id;
-            $assign_mdl[$sd->linkcode]['cm'] = $sd->cm;
-            $assign_mdl[$sd->linkcode]['lc'] = $sd->linkcode;
-            $assign_mdl[$sd->linkcode]['name'] = $sd->name;
+            $assignmdl[$sd->linkcode]['id'] = $sd->id;
+            $assignmdl[$sd->linkcode]['cm'] = $sd->cm;
+            $assignmdl[$sd->linkcode]['lc'] = $sd->linkcode;
+            $assignmdl[$sd->linkcode]['name'] = $sd->name;
         }
         // Create reference array of assignment id and link code from data warehouse.
-        $assess_ext = array();
+        $assessext = array();
         foreach ($assessments as $am) {
-            $assess_ext[$am[assessment_idcode]]['id'] = $am[id];
-            $assess_ext[$am[assessment_idcode]]['lc'] = $am[assessment_idcode];
-            $assess_ext[$am[assessment_idcode]]['name'] = $am[assessment_name];
-            $assess_ext[$am[assessment_idcode]]['dd'] = $am[assessment_duedate];
-            $assess_ext[$am[assessment_idcode]]['fb'] = $am[assessment_feedbackdate];
-            $assess_ext[$am[assessment_idcode]]['ms'] = $am[assessment_markscheme_code];
+            $assessext[$am[assessment_idcode]]['id'] = $am[id];
+            $assessext[$am[assessment_idcode]]['lc'] = $am[assessment_idcode];
+            $assessext[$am[assessment_idcode]]['name'] = $am[assessment_name];
+            $assessext[$am[assessment_idcode]]['dd'] = $am[assessment_duedate];
+            $assessext[$am[assessment_idcode]]['fb'] = $am[assessment_feedbackdate];
+            $assessext[$am[assessment_idcode]]['ms'] = $am[assessment_markscheme_code];
         }
         // Create reference array of students - if has a linked assessement AND an extension date/time.
         $student = array();
@@ -186,14 +187,13 @@ class assessmentdates extends \core\task\scheduled_task {
             }
         }
 
-
         /* Set due dates and feedback/grade by dates *
          * ----------------------------------------- */
         foreach ($assessments as $a) {
             // Error trap - ensure we have an assessment link id.
-            if ($key = array_key_exists($a['assessment_idcode'],$assign_mdl)) {
-                $idcode = $assign_mdl[$a['assessment_idcode']]['id'];
-                $linkcode = $assign_mdl[$a['assessment_idcode']]['lc'];
+            if ($key = array_key_exists($a['assessment_idcode'], $assignmdl)) {
+                $idcode = $assignmdl[$a['assessment_idcode']]['id'];
+                $linkcode = $assignmdl[$a['assessment_idcode']]['lc'];
 
                 echo '<br><br>'.$linkcode.':'.$idcode.' - Assessment dates<br>';
 
@@ -204,12 +204,13 @@ class assessmentdates extends \core\task\scheduled_task {
                 echo 'Mdl-due date/time '.$due.' - Mdl Due Date '.$duedate.' : Mdl Due Time  '.$mdlduetime.'<br>';
                 echo 'Ext-due date '.$a['assessment_duedate'].' Ext due time '.$a['assessment_duetime'].'<br>';
 
-
                 // Set duedate in external Db.
                 if (!empty($a['assessment_duedate'])) { // If external Db already has a due date.
                     // And external duedate is different, set duedate value as Moodle value.
                     if ($a['assessment_duedate'] != $duedate || $a['assessment_duetime'] != $duetime) {
-                        $sql = "UPDATE " . $tableassm . " SET assessment_duedate = '" . $duedate . "', assessment_duetime = '" . $duetime . "', assessment_changebymoodle = 1
+                        $sql = "UPDATE " . $tableassm . "
+                        SET assessment_duedate = '" . $duedate . "',
+                            assessment_duetime = '" . $duetime . "', assessment_changebymoodle = 1
                         WHERE assessment_idcode = '" . $linkcode . "';";
                         echo $sql;
                         $extdb->Execute($sql);
@@ -217,7 +218,8 @@ class assessmentdates extends \core\task\scheduled_task {
                     }
                 } else { // If external Db doesn't have a due date set.
                     if (isset($sqldates[$idcode]->duedate)) { // But MDL does, set duedate value as Moodle value.
-                        $sql = "UPDATE " . $tableassm . " SET assessment_duedate = '" . $duedate . "', assessment_duetime = '" . $duetime . "', assessment_changebymoodle = 1
+                        $sql = "UPDATE " . $tableassm . " SET assessment_duedate = '" . $duedate . "',
+                            assessment_duetime = '" . $duetime . "', assessment_changebymoodle = 1
                         WHERE assessment_idcode = '" . $linkcode . "';";
                         echo $sql;
                         $extdb->Execute($sql);
@@ -229,9 +231,11 @@ class assessmentdates extends \core\task\scheduled_task {
                 if (isset($sqldates[$idcode]) ) {
                     $gradingduedate = date('Y-m-d', $sqldates[$idcode]->gradingduedate);
                     $gradingduetime = $feedbacktime;
-                    echo 'Mdl-Feedback due date/time '.date('Y-m-d H:i:s', $sqldates[$idcode]->gradingduedate).' - Mdl Feedback Due Date '.$gradingduedate.' : Mdl Feedback Due Time  '.$gradingduetime.'<br>';
-                    echo 'Ext-Feedback due date '.$a['assessment_feedbackdate'].' Ext Feedback due time '.$a['assessment_feedbacktime'].'<br>';
-                    if($gradingduedate != $a['assessment_feedbackdate'] || $gradingduetime != $a['assessment_feedbacktime']) {
+                    echo 'Mdl-Feedback due date/time '.date('Y-m-d H:i:s', $sqldates[$idcode]->gradingduedate)
+                        .' - Mdl Feedback Due Date '.$gradingduedate.' : Mdl Feedback Due Time  '.$gradingduetime.'<br>';
+                    echo 'Ext-Feedback due date '.$a['assessment_feedbackdate'].' Ext Feedback due time '
+                        .$a['assessment_feedbacktime'].'<br>';
+                    if ($gradingduedate != $a['assessment_feedbackdate'] || $gradingduetime != $a['assessment_feedbacktime']) {
                         $assignmentdates = array();
                         $assignmentdates['id'] = $sqldates[$idcode]->id;
 
@@ -246,34 +250,33 @@ class assessmentdates extends \core\task\scheduled_task {
 
         /* Set extensions *
          * -------------- */
-        foreach ($student as $k=>$v) {
+        foreach ($student as $k => $v) {
             if (!empty($student[$k]['extdate']) || !empty($student[$k]['exttime'])) {
                 $userflags = new stdClass();
                 // Set user.
                 $username = 's'.$student[$k]['stucode'];
                 echo '<br><p>username '.$username.' </p>';
-                $userflags->userid = $DB->get_field('user', 'id', array('username'=>$username));
+                $userflags->userid = $DB->get_field('user', 'id', array('username' => $username));
                 echo '<p>userflag->userid'.$userflags->userid.' #:</p>';
                 // Set assignment.
-                $userflags->assignment = $DB->get_field('course_modules', 'instance', array('idnumber'=>$student[$k]['lc']));
+                $userflags->assignment = $DB->get_field('course_modules', 'instance', array('idnumber' => $student[$k]['lc']));
                 // Set extension date.
                 $extdate = $student[$k]['extdate'];
                 $exttime = $submissiontime;
                 $exttimestamp = strtotime($extdate.' '.$exttime);
                 $userflags->extensionduedate = $exttimestamp;
-                if (!empty($userflags->assignment) && !empty($userflags->userid)){
+                if (!empty($userflags->assignment) && !empty($userflags->userid)) {
                     // Check if record exists already.
                     if ($DB->record_exists('assign_user_flags',
-                        array('userid'=>$userflags->userid, 'assignment'=>$userflags->assignment))) {
+                        array('userid' => $userflags->userid, 'assignment' => $userflags->assignment))) {
                         $userflags->id = $DB->get_field('assign_user_flags', 'id',
-                            array('userid'=>$userflags->userid, 'assignment'=>$userflags->assignment));
+                            array('userid' => $userflags->userid, 'assignment' => $userflags->assignment));
                         $extdue = $DB->get_field('assign_user_flags', 'extensionduedate',
-                            array('userid'=>$userflags->userid, 'assignment'=>$userflags->assignment));
+                            array('userid' => $userflags->userid, 'assignment' => $userflags->assignment));
                         // If the extension date is different then update the one on Moodle to be the same as the SITS date.
-                        if ($extdue != $userflags->extensionduedate){
+                        if ($extdue != $userflags->extensionduedate) {
                             $DB->update_record('assign_user_flags', $userflags, false);
                             echo $username.' updated<br>';
-//                            print_r($userflags);
                         }
                     } else { // If no record exists.
                         // Set other default values.
@@ -283,21 +286,18 @@ class assessmentdates extends \core\task\scheduled_task {
                         $userflags->allocatedmarker = 0;
                         $DB->insert_record('assign_user_flags', $userflags, false);
                         echo $username.' created<br';
-//                        print_r($userflags);
                     }
                 }
-
             }
-
         }
 
-    $sql = "UPDATE " . $tablegrades . " SET assessment_changebydw = 0 WHERE assessment_changebydw = 1;";
-    $extdb->Execute($sql);
-    $sql = "UPDATE " . $tableassm . " SET assessment_changebydw = 0 WHERE assessment_changebydw = 1;";
-    $extdb->Execute($sql);
+        $sql = "UPDATE " . $tablegrades . " SET assessment_changebydw = 0 WHERE assessment_changebydw = 1;";
+        $extdb->Execute($sql);
+        $sql = "UPDATE " . $tableassm . " SET assessment_changebydw = 0 WHERE assessment_changebydw = 1;";
+        $extdb->Execute($sql);
 
-    // Free memory.
-    $extdb->Close();
+        // Free memory.
+        $extdb->Close();
     }
 
     /* Db functions cloned from enrol/db plugin.
