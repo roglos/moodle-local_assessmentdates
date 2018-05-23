@@ -195,7 +195,7 @@ class assessmentdates extends \core\task\scheduled_task {
                 $idcode = $assign_mdl[$a['assessment_idcode']]['id'];
                 $linkcode = $assign_mdl[$a['assessment_idcode']]['lc'];
 
-                echo $linkcode.':'.$idcode.' - Assessment dates<br>';
+                echo '<br><br>'.$linkcode.':'.$idcode.' - Assessment dates<br>';
 
                 $due = date('Y-m-d H:i:s', $sqldates[$idcode]->duedate);
                 $duedate = date('Y-m-d', $sqldates[$idcode]->duedate);
@@ -204,12 +204,7 @@ class assessmentdates extends \core\task\scheduled_task {
                 echo 'Mdl-due date/time '.$due.' - Mdl Due Date '.$duedate.' : Mdl Due Time  '.$mdlduetime.'<br>';
                 echo 'Ext-due date '.$a['assessment_duedate'].' Ext due time '.$a['assessment_duetime'].'<br>';
 
-                if ($mdlduetime != $duetime) {
-                    $submissiondateunix = strtotime(date('Y-m-d', $sqldates[$idcode]->duedate).' '.$duetime);
-                    echo $mdlduetime.':'.$duetime.': '.$duedate.'<br>';
 
-                    $DB->set_field('assign', 'duedate', $submissiondateunix, array('id'=>$idcode));
-                }
                 // Set duedate in external Db.
                 if (!empty($a['assessment_duedate'])) { // If external Db already has a due date.
                     // And external duedate is different, set duedate value as Moodle value.
@@ -256,9 +251,9 @@ class assessmentdates extends \core\task\scheduled_task {
                 $userflags = new stdClass();
                 // Set user.
                 $username = 's'.$student[$k]['stucode'];
-                echo 'username '.$username.' ';
+                echo '<br><p>username '.$username.' </p>';
                 $userflags->userid = $DB->get_field('user', 'id', array('username'=>$username));
-                echo 'userflag->userid'.$userflags->userid.' #:';
+                echo '<p>userflag->userid'.$userflags->userid.' #:</p>';
                 // Set assignment.
                 $userflags->assignment = $DB->get_field('course_modules', 'instance', array('idnumber'=>$student[$k]['lc']));
                 // Set extension date.
@@ -296,6 +291,10 @@ class assessmentdates extends \core\task\scheduled_task {
 
         }
 
+    $sql = "UPDATE " . $tablegrades . " SET assessment_changebydw = 0 WHERE assessment_changebydw = 1;";
+    $extdb->Execute($sql);
+    $sql = "UPDATE " . $tableassm . " SET assessment_changebydw = 0 WHERE assessment_changebydw = 1;";
+    $extdb->Execute($sql);
 
     // Free memory.
     $extdb->Close();
