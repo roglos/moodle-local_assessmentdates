@@ -88,6 +88,11 @@ class assessmentdates extends \core\task\scheduled_task {
             JOIN {assign} a ON m.instance = a.id
             JOIN {modules} mo ON m.module = mo.id
             WHERE m.idnumber IS NOT null AND m.idnumber != "" AND mo.name = "assign"');
+        $sqlquizdates = $DB->get_records_sql('SELECT q.id as id,m.id as cm, m.idnumber as linkcode, q.name, q.timeclose as duedate, null as gradingduedate
+            FROM {course_modules} m
+            JOIN {quiz} q ON m.instance = q.id
+            JOIN {modules} mo ON m.module = mo.id
+            WHERE m.idnumber IS NOT null AND m.idnumber != "" AND mo.name = "quiz"');
 
         // Get external assessments table name.
         $tableassm = $this->get_config('remotetable');
@@ -162,7 +167,17 @@ class assessmentdates extends \core\task\scheduled_task {
             $assignmdl[$sd->linkcode]['cm'] = $sd->cm;
             $assignmdl[$sd->linkcode]['lc'] = $sd->linkcode;
             $assignmdl[$sd->linkcode]['name'] = $sd->name;
+            $assignmdl[$sd->linkcode]['duedate'] = $sd->duedate;
         }
+        // Add quiz dates to assignments.
+        foreach ($sqlquizdates as $sd) {
+            $assignmdl[$sd->linkcode]['id'] = $sd->id;
+            $assignmdl[$sd->linkcode]['cm'] = $sd->cm;
+            $assignmdl[$sd->linkcode]['lc'] = $sd->linkcode;
+            $assignmdl[$sd->linkcode]['name'] = $sd->name;
+            $assignmdl[$sd->linkcode]['duedate'] = $sd->duedate;
+        }
+
         // Create reference array of assignment id and link code from data warehouse.
         $assessext = array();
         foreach ($assessments as $am) {
@@ -197,9 +212,9 @@ class assessmentdates extends \core\task\scheduled_task {
 
                 echo '<br><br>'.$linkcode.':'.$idcode.' - Assessment dates<br>';
 
-                $due = date('Y-m-d H:i:s', $sqldates[$idcode]->duedate);
-                $duedate = date('Y-m-d', $sqldates[$idcode]->duedate);
-                $mdlduetime = date('H:i:s', $sqldates[$idcode]->duedate);
+                $due = date('Y-m-d H:i:s', $assignmdl[$a['assessment_idcode']]['duedate']);
+                $duedate = date('Y-m-d', $assignmdl[$a['assessment_idcode']]['duedate']);
+                $mdlduetime = date('H:i:s', $assignmdl[$a['assessment_idcode']]['duedate']);
                 $duetime = $submissiontime;
                 echo 'Mdl-due date/time '.$due.' - Mdl Due Date '.$duedate.' : Mdl Due Time  '.$mdlduetime.'<br>';
                 echo 'Ext-due date '.$a['assessment_duedate'].' Ext due time '.$a['assessment_duetime'].'<br>';
@@ -217,7 +232,7 @@ class assessmentdates extends \core\task\scheduled_task {
                         echo $idcode . " Due Date updated on external Db - " . $duedate . "<br><br>";
                     }
                 } else { // If external Db doesn't have a due date set.
-                    if (isset($sqldates[$idcode]->duedate)) { // But MDL does, set duedate value as Moodle value.
+                    if (isset($assignmdl[$a['assessment_idcode']]['duedate'])) { // But MDL does, set duedate value as Moodle value.
                         $sql = "UPDATE " . $tableassm . " SET assessment_duedate = '" . $duedate . "',
                             assessment_duetime = '" . $duetime . "', assessment_changebymoodle = 1
                         WHERE assessment_idcode = '" . $linkcode . "';";
