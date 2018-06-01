@@ -31,6 +31,11 @@
 
 defined('MOODLE_INTERNAL') || die();
 
-$plugin->version   = 2018112900;        // The current plugin version (Date: YYYYMMDDXX).
+$plugin->version   = 2018053100;        // The current plugin version (Date: YYYYMMDDXX).
+$plugin->release  = 'v3.5.1.0';
+$plugin->maturity  = MATURITY_STABLE;
 $plugin->requires  = 2017050500;        // Requires this Moodle version.
 $plugin->component = 'local_assessmentdates';  // Full name of the plugin (used for diagnostics).
+$plugin->dependencies = array(
+    'local_assessmentsettings'  => 2018053100,
+);
